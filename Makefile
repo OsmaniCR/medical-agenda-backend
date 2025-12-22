@@ -39,9 +39,9 @@ migrate: ## Ejecuta migraciones en el contenedor Docker
 
 migrate-reset: ## Resetea la base de datos (¡CUIDADO: elimina todos los datos!)
 	@echo "⚠️  Esto eliminará todos los datos de la base de datos"
-	@echo "Ejecutando: docker compose exec backend rm -f db.sqlite3"
+	@echo "Ejecutando: docker compose exec backend rm -f /app/data/db.sqlite3"
 	@echo "Ejecutando: docker compose exec backend python manage.py migrate"
-	$(DOCKER_COMPOSE) exec $(SERVICE) rm -f db.sqlite3
+	$(DOCKER_COMPOSE) exec $(SERVICE) rm -f /app/data/db.sqlite3
 	$(DOCKER_COMPOSE) exec $(SERVICE) python manage.py migrate
 	@echo "✅ Base de datos reseteada"
 

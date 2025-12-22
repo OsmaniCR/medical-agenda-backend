@@ -31,5 +31,6 @@ COPY . .
 EXPOSE 8000
 
 # Run migrations and start ASGI server
-CMD ["sh", "-c", "python manage.py migrate && uvicorn core.asgi:application --host 0.0.0.0 --port 8000"]
+# Crea el directorio de datos si no existe y ejecuta migraciones
+CMD ["sh", "-c", "mkdir -p /app/data && python manage.py migrate && uvicorn core.asgi:application --host 0.0.0.0 --port 8000"]
 

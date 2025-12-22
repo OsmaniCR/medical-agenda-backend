@@ -483,7 +483,9 @@ sudo systemctl enable docker
 
 - **Variables de entorno**: Todas las configuraciones sensibles ahora usan variables de entorno. Asegúrate de configurar el archivo `.env` antes de ejecutar.
 - **OpenAI API Key**: Es requerida para que el chatbot funcione. Obtén una en [OpenAI Platform](https://platform.openai.com/).
-- El sistema utiliza SQLite por defecto. Para producción, se recomienda usar PostgreSQL o MySQL.
+- **Base de datos**: El sistema utiliza SQLite por defecto. La base de datos se crea automáticamente en el directorio `data/` del proyecto cuando ejecutas las migraciones. Este directorio se monta como volumen en Docker para persistir los datos entre reinicios del contenedor.
+- **Primera ejecución**: Si es la primera vez que ejecutas el proyecto en un nuevo PC, la base de datos se creará automáticamente al ejecutar `make first-setup` o `make migrate`. No necesitas crear el archivo manualmente.
+- Para producción, se recomienda usar PostgreSQL o MySQL.
 - Los tokens JWT expiran después de 24 horas (configurable mediante `JWT_EXPIRATION_DELTA`).
 - **Class-based Views**: Todas las vistas del backend están implementadas como class-based views siguiendo las mejores prácticas de Django REST Framework.
 

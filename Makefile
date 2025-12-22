@@ -11,7 +11,31 @@ help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Setup inicial
-install: ## Instala las dependencias con Poetry
+check-poetry: ## Verifica si Poetry está instalado, si no, muestra instrucciones
+	@if ! command -v $(POETRY) >/dev/null 2>&1; then \
+		echo "❌ Poetry no está instalado."; \
+		echo ""; \
+		echo "📦 Para instalar Poetry, ejecuta uno de los siguientes comandos:"; \
+		echo ""; \
+		echo "   curl -sSL https://install.python-poetry.org | python3 -"; \
+		echo ""; \
+		echo "   O en macOS con Homebrew:"; \
+		echo "   brew install poetry"; \
+		echo ""; \
+		echo "   O con pip:"; \
+		echo "   pip install poetry"; \
+		echo ""; \
+		echo "📖 Para más información, visita: https://python-poetry.org/docs/#installation"; \
+		echo ""; \
+		echo "⚠️  Después de instalar, asegúrate de agregar Poetry al PATH:"; \
+		echo "   export PATH=\"$$HOME/.local/bin:$$PATH\""; \
+		echo ""; \
+		exit 1; \
+	else \
+		echo "✅ Poetry está instalado ($(shell $(POETRY) --version))"; \
+	fi
+
+install: check-poetry ## Instala las dependencias con Poetry
 	$(POETRY) install --no-root
 
 setup: install env-file migrate ## Setup completo: instala dependencias, crea .env y ejecuta migraciones
@@ -143,7 +167,7 @@ clean-db: ## Elimina la base de datos (¡CUIDADO!)
 	fi
 
 # Comando completo para setup inicial después de clonar
-first-setup: install env-file migrate setup-first-user ## Setup completo para nuevos desarrolladores
+first-setup: check-poetry install env-file migrate setup-first-user ## Setup completo para nuevos desarrolladores
 	@echo ""
 	@echo "🎉 ¡Setup inicial completado!"
 	@echo ""

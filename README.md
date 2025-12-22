@@ -22,6 +22,52 @@ Sistema completo de agendamiento médico con autenticación JWT y chatbot integr
 - Make (opcional, pero recomendado para facilitar el desarrollo)
 - Base de datos SQLite (incluida por defecto)
 
+### Instalación de Poetry
+
+Si no tienes Poetry instalado, puedes instalarlo de las siguientes maneras:
+
+#### Instalación Automática (Recomendado)
+
+El comando `make first-setup` intentará instalar Poetry automáticamente si no está instalado.
+
+#### Instalación Manual
+
+**Todos los sistemas:**
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+**macOS (con Homebrew):**
+```bash
+brew install poetry
+```
+
+**Windows (con pip):**
+```bash
+pip install poetry
+```
+
+**Linux (con pip):**
+```bash
+pip install --user poetry
+```
+
+Después de instalar, asegúrate de agregar Poetry al PATH:
+```bash
+# Linux/macOS
+export PATH="$HOME/.local/bin:$PATH"
+
+# O añádelo permanentemente a tu ~/.bashrc o ~/.zshrc
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+```
+
+**Verificar instalación:**
+```bash
+poetry --version
+```
+
+Para más información, visita: https://python-poetry.org/docs/#installation
+
 ### Instalación de Make
 
 Si no tienes Make instalado, puedes instalarlo según tu sistema operativo:

@@ -87,31 +87,51 @@ Make viene incluido con Git for Windows. Puedes usar los comandos del Makefile d
 
 **Setup inicial después de clonar el repositorio:**
 
-```bash
-cd medical-agenda-backend
-make first-setup
-```
+1. **Crea el archivo `.env`** copiando desde `.env.example`:
 
-Este comando automáticamente:
+   **Linux/macOS:**
+   ```bash
+   cd medical-agenda-backend
+   cp .env.example .env
+   ```
 
-- Instala las dependencias
-- Crea el archivo `.env` desde `.env.example`
-- Ejecuta las migraciones
-- Crea el primer usuario (username: `admin`, password: `admin123`)
+   **Windows (PowerShell):**
+   ```powershell
+   cd medical-agenda-backend
+   Copy-Item .env.example .env
+   ```
 
-**Edita el archivo `.env`** y configura las variables necesarias:
+   **Windows (CMD):**
+   ```cmd
+   cd medical-agenda-backend
+   copy .env.example .env
+   ```
 
-```bash
-# Requerido
-OPENAI_API_KEY=tu-api-key-de-openai
-SECRET_KEY=tu-secret-key-seguro
-```
+2. **Edita el archivo `.env`** y configura las variables necesarias:
 
-Después de editar el `.env`, reinicia el contenedor:
+   ```env
+   # Requerido
+   OPENAI_API_KEY=tu-api-key-de-openai
+   SECRET_KEY=tu-secret-key-seguro
+   ```
 
-```bash
-make restart
-```
+3. **Ejecuta el setup inicial:**
+
+   ```bash
+   make first-setup
+   ```
+
+   Este comando automáticamente:
+   - Construye la imagen Docker
+   - Inicia el contenedor
+   - Ejecuta las migraciones
+   - Crea el primer usuario (username: `admin`, password: `admin123`)
+
+4. **Si necesitas reiniciar el contenedor después de editar el `.env`:**
+
+   ```bash
+   make restart
+   ```
 
 El backend estará disponible en `http://localhost:8000`
 
@@ -130,7 +150,6 @@ make migrate           # Ejecuta migraciones
 make createsuperuser   # Crea un superusuario interactivo
 make setup-first-user  # Crea el primer usuario (admin/admin123)
 make test              # Ejecuta los tests
-make clean             # Limpia archivos temporales
 ```
 
 #### Ejecución Manual con Docker (sin Makefile)
@@ -143,17 +162,34 @@ cd medical-agenda-backend
 
 2. Copia el archivo de ejemplo de variables de entorno:
 
-```bash
-cp .env.example .env
-```
+   **Linux/macOS:**
+   ```bash
+   cp .env.example .env
+   ```
+
+   **Windows (PowerShell):**
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   **Windows (CMD):**
+   ```cmd
+   copy .env.example .env
+   ```
 
 3. Edita el archivo `.env` y configura las variables necesarias
 
 4. Construye y ejecuta el contenedor:
 
-```bash
-docker-compose up --build
-```
+   **Docker Compose v2:**
+   ```bash
+   docker compose up --build
+   ```
+
+   **Docker Compose v1:**
+   ```bash
+   docker-compose up --build
+   ```
 
 El backend estará disponible en `http://localhost:8000`
 
@@ -339,18 +375,41 @@ VITE_API_BASE_URL=http://localhost:8000/api
 
 ## 🛠️ Makefile - Comandos Rápidos
 
-El backend incluye un Makefile con comandos útiles para facilitar el desarrollo.
+El backend incluye un Makefile con comandos útiles para facilitar el desarrollo. **Todos los comandos del Makefile usan solo Docker Compose** para garantizar portabilidad entre sistemas operativos (Linux, macOS, Windows).
+
+**Nota sobre Docker Compose**: El Makefile está configurado para usar `docker compose` (v2) por defecto. Si tienes `docker-compose` (v1), edita el Makefile y cambia la línea 6 de `DOCKER_COMPOSE := docker compose` a `DOCKER_COMPOSE := docker-compose`.
 
 ### Setup Inicial (Después de Clonar)
 
+**IMPORTANTE**: Antes de ejecutar `make first-setup`, debes crear el archivo `.env` manualmente:
+
+**Linux/macOS:**
 ```bash
 cd medical-agenda-backend
+cp .env.example .env
+```
+
+**Windows (PowerShell):**
+```powershell
+cd medical-agenda-backend
+Copy-Item .env.example .env
+```
+
+**Windows (CMD):**
+```cmd
+cd medical-agenda-backend
+copy .env.example .env
+```
+
+Luego edita el `.env` y configura las variables necesarias (especialmente `OPENAI_API_KEY`).
+
+Después ejecuta:
+```bash
 make first-setup
 ```
 
-Este comando hace todo automáticamente:
+Este comando automáticamente:
 
-- ✅ Crea archivo `.env` desde `.env.example`
 - ✅ Construye la imagen Docker
 - ✅ Inicia el contenedor
 - ✅ Ejecuta migraciones
@@ -372,7 +431,29 @@ make migrate           # Ejecuta migraciones
 make createsuperuser   # Crea superusuario (interactivo)
 make setup-first-user  # Crea primer usuario (admin/admin123)
 make test              # Ejecuta tests
-make clean             # Limpia archivos temporales
+```
+
+### Limpieza Manual
+
+Para limpiar archivos temporales de Python, ejecuta estos comandos según tu sistema:
+
+**Linux/macOS:**
+```bash
+find . -type d -name "__pycache__" -exec rm -r {} + 2>/dev/null || true
+find . -type f -name "*.pyc" -delete
+find . -type f -name "*.pyo" -delete
+rm -rf .pytest_cache .coverage htmlcov
+```
+
+**Windows (PowerShell):**
+```powershell
+Get-ChildItem -Path . -Recurse -Filter __pycache__ | Remove-Item -Recurse -Force
+Get-ChildItem -Path . -Recurse -Filter *.pyc | Remove-Item -Force
+Get-ChildItem -Path . -Recurse -Filter *.pyo | Remove-Item -Force
+Remove-Item -Path .pytest_cache,.coverage,htmlcov -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+**Nota**: El Makefile solo contiene comandos de Docker Compose para garantizar portabilidad entre sistemas operativos.
 ```
 
 ## 🐳 Docker

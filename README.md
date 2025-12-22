@@ -16,57 +16,11 @@ Sistema completo de agendamiento médico con autenticación JWT y chatbot integr
 
 ## 📋 Requisitos Previos
 
-- Python 3.12+
-- Poetry (para gestión de dependencias de Python)
-- Bun (para gestión de dependencias de Node.js)
-- Make (opcional, pero recomendado para facilitar el desarrollo)
-- Base de datos SQLite (incluida por defecto)
+- **Docker** y **Docker Compose** (requerido para el backend)
+- **Bun** (para gestión de dependencias de Node.js en el frontend)
+- **Make** (opcional, pero recomendado para facilitar el desarrollo)
 
-### Instalación de Poetry
-
-Si no tienes Poetry instalado, puedes instalarlo de las siguientes maneras:
-
-#### Instalación Automática (Recomendado)
-
-El comando `make first-setup` intentará instalar Poetry automáticamente si no está instalado.
-
-#### Instalación Manual
-
-**Todos los sistemas:**
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-**macOS (con Homebrew):**
-```bash
-brew install poetry
-```
-
-**Windows (con pip):**
-```bash
-pip install poetry
-```
-
-**Linux (con pip):**
-```bash
-pip install --user poetry
-```
-
-Después de instalar, asegúrate de agregar Poetry al PATH:
-```bash
-# Linux/macOS
-export PATH="$HOME/.local/bin:$PATH"
-
-# O añádelo permanentemente a tu ~/.bashrc o ~/.zshrc
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-```
-
-**Verificar instalación:**
-```bash
-poetry --version
-```
-
-Para más información, visita: https://python-poetry.org/docs/#installation
+**Nota**: El backend está completamente dockerizado, por lo que no necesitas instalar Python, Poetry ni ninguna otra dependencia de Python en tu sistema local.
 
 ### Instalación de Make
 
@@ -153,79 +107,33 @@ OPENAI_API_KEY=tu-api-key-de-openai
 SECRET_KEY=tu-secret-key-seguro
 ```
 
-**Inicia el servidor:**
+Después de editar el `.env`, reinicia el contenedor:
 
 ```bash
-make run
+make restart
 ```
 
 El backend estará disponible en `http://localhost:8000`
 
-**Otros comandos útiles del Makefile:**
+**Comandos útiles del Makefile:**
 
 ```bash
 make help              # Muestra todos los comandos disponibles
-make setup             # Setup básico (sin crear usuario)
+make build             # Construye la imagen Docker
+make run               # Inicia el servidor ASGI en modo foreground (ver logs en tiempo real)
+make up                # Inicia los contenedores en modo background
+make down              # Detiene los contenedores
+make logs              # Muestra los logs
+make restart           # Reinicia los contenedores
+make shell             # Abre un shell en el contenedor
 make migrate           # Ejecuta migraciones
 make createsuperuser   # Crea un superusuario interactivo
 make setup-first-user  # Crea el primer usuario (admin/admin123)
-make shell             # Abre el shell de Django
 make test              # Ejecuta los tests
 make clean             # Limpia archivos temporales
 ```
 
-#### Opción 1b: Ejecución Local (Manual)
-
-Si prefieres ejecutar los comandos manualmente:
-
-1. Navega al directorio del backend:
-
-```bash
-cd medical-agenda-backend
-```
-
-2. Copia el archivo de ejemplo de variables de entorno:
-
-```bash
-cp .env.example .env
-```
-
-3. Edita el archivo `.env` y configura las variables necesarias
-
-4. Instala las dependencias con Poetry:
-
-```bash
-poetry install
-```
-
-5. Activa el entorno virtual:
-
-```bash
-poetry shell
-```
-
-6. Ejecuta las migraciones:
-
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-7. Crea un superusuario:
-
-```bash
-python manage.py createsuperuser
-```
-
-8. Inicia el servidor de desarrollo:
-
-```bash
-python manage.py runserver
-# o
-uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --reload
-```
-
-#### Opción 2: Ejecución con Docker
+#### Ejecución Manual con Docker (sin Makefile)
 
 1. Navega al directorio del backend:
 
@@ -244,11 +152,6 @@ cp .env.example .env
 4. Construye y ejecuta el contenedor:
 
 ```bash
-# Usando Makefile
-make docker-build
-make docker-up
-
-# O directamente con docker-compose
 docker-compose up --build
 ```
 
@@ -257,14 +160,13 @@ El backend estará disponible en `http://localhost:8000`
 **Comandos Docker útiles:**
 
 ```bash
-make docker-build          # Construye la imagen
-make docker-up            # Inicia los contenedores
-make docker-down          # Detiene los contenedores
-make docker-logs          # Muestra los logs
-make docker-restart       # Reinicia los contenedores
-make docker-shell         # Abre un shell en el contenedor
-make docker-migrate       # Ejecuta migraciones en Docker
-make docker-createsuperuser  # Crea superusuario en Docker
+docker-compose build              # Construye la imagen
+docker-compose up -d              # Inicia los contenedores en segundo plano
+docker-compose down               # Detiene los contenedores
+docker-compose logs -f           # Muestra los logs
+docker-compose restart            # Reinicia los contenedores
+docker-compose exec backend bash  # Abre un shell en el contenedor
+docker-compose exec backend python manage.py migrate  # Ejecuta migraciones
 ```
 
 ### Frontend
@@ -448,8 +350,9 @@ make first-setup
 
 Este comando hace todo automáticamente:
 
-- ✅ Instala dependencias
-- ✅ Crea archivo `.env`
+- ✅ Crea archivo `.env` desde `.env.example`
+- ✅ Construye la imagen Docker
+- ✅ Inicia el contenedor
 - ✅ Ejecuta migraciones
 - ✅ Crea primer usuario (admin/admin123)
 
@@ -458,50 +361,42 @@ Este comando hace todo automáticamente:
 ```bash
 make help              # Muestra todos los comandos disponibles
 make first-setup       # Setup completo para nuevos desarrolladores
-make install           # Instala dependencias
-make setup             # Setup básico (sin crear usuario)
-make run               # Inicia servidor ASGI (uvicorn)
+make build             # Construye la imagen Docker
+make run               # Inicia el servidor ASGI en modo foreground (ver logs en tiempo real)
+make up                # Inicia los contenedores en modo background
+make down              # Detiene los contenedores
+make logs              # Muestra los logs
+make restart           # Reinicia los contenedores
+make shell             # Abre shell en el contenedor
 make migrate           # Ejecuta migraciones
 make createsuperuser   # Crea superusuario (interactivo)
 make setup-first-user  # Crea primer usuario (admin/admin123)
-make shell             # Abre shell de Django
 make test              # Ejecuta tests
 make clean             # Limpia archivos temporales
 ```
 
-### Comandos Docker
-
-```bash
-make docker-build      # Construye imagen Docker
-make docker-up        # Inicia contenedores
-make docker-down      # Detiene contenedores
-make docker-logs      # Muestra logs
-make docker-restart   # Reinicia contenedores
-make docker-shell     # Abre shell en contenedor
-make docker-migrate   # Ejecuta migraciones en Docker
-```
-
 ## 🐳 Docker
 
-El backend puede ejecutarse usando Docker. Para más información, consulta la sección de instalación del backend.
+El backend está completamente dockerizado. Todos los comandos del Makefile utilizan Docker internamente, por lo que no necesitas instalar Python, Poetry ni ninguna otra dependencia de Python en tu sistema local.
 
-### Comandos Docker útiles
+### Instalación de Docker
 
+Si no tienes Docker instalado:
+
+**macOS:**
+- Descarga Docker Desktop desde: https://www.docker.com/products/docker-desktop/
+
+**Linux (Ubuntu/Debian):**
 ```bash
-# Construir y ejecutar
-docker-compose up --build
-
-# Ejecutar en segundo plano
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f
-
-# Detener
-docker-compose down
+sudo apt-get update
+sudo apt-get install docker.io docker-compose
+sudo systemctl start docker
+sudo systemctl enable docker
 ```
 
-O usa los comandos del Makefile (ver sección anterior).
+**Windows:**
+- Descarga Docker Desktop desde: https://www.docker.com/products/docker-desktop/
+- O instala WSL2 y Docker dentro de WSL2
 
 ## 📝 Notas
 

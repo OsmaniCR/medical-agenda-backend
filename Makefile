@@ -1,89 +1,72 @@
-.PHONY: help install setup migrate run createsuperuser shell test clean docker-build docker-up docker-down docker-logs docker-shell setup-first-user
+.PHONY: help build up down logs restart shell migrate setup-first-user first-setup clean check-docker env-file
 
-# Variables
-PYTHON := python
-MANAGE := $(PYTHON) manage.py
-POETRY := poetry
-DOCKER_COMPOSE := docker-compose
+# Variables - Detecta automáticamente docker compose o docker-compose
+DOCKER_COMPOSE := $(shell which docker-compose >/dev/null 2>&1 && echo docker-compose || echo "docker compose")
+SERVICE := backend
+
+# Verifica que Docker esté instalado
+check-docker:
+	@if ! command -v docker >/dev/null 2>&1; then \
+		echo "❌ Docker no está instalado o no está en el PATH"; \
+		echo "📖 Instala Docker desde: https://www.docker.com/products/docker-desktop/"; \
+		exit 1; \
+	fi
+	@if ! docker info >/dev/null 2>&1; then \
+		echo "❌ Docker no está corriendo. Por favor, inicia Docker Desktop"; \
+		exit 1; \
+	fi
 
 help: ## Muestra esta ayuda
 	@echo "Comandos disponibles:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Setup inicial
-check-poetry: ## Verifica si Poetry está instalado, si no, muestra instrucciones
-	@if ! command -v $(POETRY) >/dev/null 2>&1; then \
-		echo "❌ Poetry no está instalado."; \
-		echo ""; \
-		echo "📦 Para instalar Poetry, ejecuta uno de los siguientes comandos:"; \
-		echo ""; \
-		echo "   curl -sSL https://install.python-poetry.org | python3 -"; \
-		echo ""; \
-		echo "   O en macOS con Homebrew:"; \
-		echo "   brew install poetry"; \
-		echo ""; \
-		echo "   O con pip:"; \
-		echo "   pip install poetry"; \
-		echo ""; \
-		echo "📖 Para más información, visita: https://python-poetry.org/docs/#installation"; \
-		echo ""; \
-		echo "⚠️  Después de instalar, asegúrate de agregar Poetry al PATH:"; \
-		echo "   export PATH=\"$$HOME/.local/bin:$$PATH\""; \
-		echo ""; \
-		exit 1; \
-	else \
-		echo "✅ Poetry está instalado ($(shell $(POETRY) --version))"; \
-	fi
+# Docker - Comandos principales
+build: check-docker ## Construye la imagen Docker
+	$(DOCKER_COMPOSE) build
 
-install: check-poetry ## Instala las dependencias con Poetry
-	$(POETRY) install --no-root
+run: ## Inicia el servidor ASGI
+	$(DOCKER_COMPOSE) up $(SERVICE)
 
-setup: install env-file migrate ## Setup completo: instala dependencias, crea .env y ejecuta migraciones
-	@echo "✅ Setup completado!"
-	@echo "📝 Recuerda editar el archivo .env con tus configuraciones"
-	@echo "👤 Ejecuta 'make setup-first-user' para crear tu primer usuario"
+up: ## Inicia los contenedores Docker
+	$(DOCKER_COMPOSE) up -d
 
-env-file: ## Crea el archivo .env desde .env.example si no existe
-	@if [ ! -f .env ]; then \
-		cp .env.example .env; \
-		echo "✅ Archivo .env creado desde .env.example"; \
-		echo "⚠️  IMPORTANTE: Edita el archivo .env y configura OPENAI_API_KEY y SECRET_KEY"; \
-	else \
-		echo "ℹ️  El archivo .env ya existe"; \
-	fi
+down: ## Detiene los contenedores Docker
+	$(DOCKER_COMPOSE) down
+
+logs: ## Muestra los logs de los contenedores
+	$(DOCKER_COMPOSE) logs -f $(SERVICE)
+
+restart: ## Reinicia los contenedores Docker
+	$(DOCKER_COMPOSE) restart $(SERVICE)
+
+shell: ## Abre un shell en el contenedor Docker
+	$(DOCKER_COMPOSE) exec $(SERVICE) bash
 
 # Base de datos
-migrate: ## Ejecuta las migraciones
-	$(POETRY) run $(MANAGE) makemigrations
-	$(POETRY) run $(MANAGE) migrate
+migrate: ## Ejecuta migraciones en el contenedor Docker
+	$(DOCKER_COMPOSE) exec $(SERVICE) python manage.py makemigrations
+	$(DOCKER_COMPOSE) exec $(SERVICE) python manage.py migrate
 
 migrate-reset: ## Resetea la base de datos (¡CUIDADO: elimina todos los datos!)
 	@echo "⚠️  Esto eliminará todos los datos de la base de datos"
 	@read -p "¿Estás seguro? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		rm -f db.sqlite3; \
-		$(POETRY) run $(MANAGE) migrate; \
+		$(DOCKER_COMPOSE) exec $(SERVICE) rm -f db.sqlite3; \
+		$(DOCKER_COMPOSE) exec $(SERVICE) python manage.py migrate; \
 		echo "✅ Base de datos reseteada"; \
 	fi
 
-# Desarrollo
-run: ## Ejecuta el servidor ASGI con Uvicorn
-	$(POETRY) run uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --reload
-
-shell: ## Abre el shell de Django
-	$(POETRY) run $(MANAGE) shell_plus
-
 # Usuarios
 createsuperuser: ## Crea un superusuario de forma interactiva
-	$(POETRY) run $(MANAGE) createsuperuser
+	$(DOCKER_COMPOSE) exec $(SERVICE) python manage.py createsuperuser
 
 setup-first-user: ## Crea el primer usuario de forma no interactiva (username: admin, password: admin123)
 	@echo "🔐 Creando primer usuario..."
 	@echo "   Username: admin"
 	@echo "   Password: admin123"
 	@echo "   Email: admin@example.com"
-	@$(POETRY) run $(MANAGE) shell -c "from django.contrib.auth.models import User; \
+	@$(DOCKER_COMPOSE) exec $(SERVICE) python manage.py shell -c "from django.contrib.auth.models import User; \
 		User.objects.filter(username='admin').exists() or \
 		User.objects.create_superuser('admin', 'admin@example.com', 'admin123') and \
 		print('✅ Usuario admin creado exitosamente') or \
@@ -91,62 +74,41 @@ setup-first-user: ## Crea el primer usuario de forma no interactiva (username: a
 	@echo ""
 	@echo "⚠️  IMPORTANTE: Cambia la contraseña después del primer login"
 
-create-user: ## Crea un usuario normal (interactivo)
-	@read -p "Username: " username; \
-	read -p "Email: " email; \
-	read -sp "Password: " password; \
-	echo; \
-	$(POETRY) run $(MANAGE) shell -c "from django.contrib.auth.models import User; \
-		User.objects.create_user('$$username', '$$email', '$$password') and \
-		print('✅ Usuario creado exitosamente')"
+# Setup inicial
+env-file: ## Crea el archivo .env desde .env.example si no existe
+	@if [ ! -f .env ]; then \
+		if [ ! -f .env.example ]; then \
+			echo "❌ Error: No se encontró el archivo .env.example"; \
+			exit 1; \
+		fi; \
+		cp .env.example .env; \
+		echo "✅ Archivo .env creado desde .env.example"; \
+		echo "⚠️  IMPORTANTE: Edita el archivo .env y configura OPENAI_API_KEY y SECRET_KEY"; \
+	else \
+		echo "ℹ️  El archivo .env ya existe, no se modificará"; \
+	fi
+
+first-setup: check-docker env-file build up migrate setup-first-user ## Setup completo para nuevos desarrolladores
+	@echo ""
+	@echo "🎉 ¡Setup inicial completado!"
+	@echo ""
+	@echo "📋 Próximos pasos:"
+	@echo "   1. Edita el archivo .env y configura:"
+	@echo "      - OPENAI_API_KEY (requerido)"
+	@echo "      - SECRET_KEY (recomendado cambiar)"
+	@echo "   2. El servidor ya está corriendo en http://localhost:8000"
+	@echo "   3. Si necesitas reiniciar, usa 'make restart'"
+	@echo ""
+	@echo "👤 Credenciales del primer usuario:"
+	@echo "   Username: admin"
+	@echo "   Password: admin123"
+	@echo "   ⚠️  Cambia la contraseña después del primer login"
 
 # Testing
-test: ## Ejecuta los tests
-	$(POETRY) run $(MANAGE) test
-
-test-coverage: ## Ejecuta los tests con cobertura
-	$(POETRY) run coverage run --source='.' $(MANAGE) test
-	$(POETRY) run coverage report
-	$(POETRY) run coverage html
-
-# Docker
-docker-build: ## Construye la imagen Docker
-	$(DOCKER_COMPOSE) build
-
-docker-up: ## Inicia los contenedores Docker
-	$(DOCKER_COMPOSE) up -d
-
-docker-down: ## Detiene los contenedores Docker
-	$(DOCKER_COMPOSE) down
-
-docker-logs: ## Muestra los logs de los contenedores
-	$(DOCKER_COMPOSE) logs -f
-
-docker-restart: ## Reinicia los contenedores Docker
-	$(DOCKER_COMPOSE) restart
-
-docker-shell: ## Abre un shell en el contenedor Docker
-	$(DOCKER_COMPOSE) exec backend bash
-
-docker-migrate: ## Ejecuta migraciones en el contenedor Docker
-	$(DOCKER_COMPOSE) exec backend python manage.py makemigrations
-	$(DOCKER_COMPOSE) exec backend python manage.py migrate
-
-docker-createsuperuser: ## Crea un superusuario en el contenedor Docker
-	$(DOCKER_COMPOSE) exec backend python manage.py createsuperuser
+test: ## Ejecuta los tests en el contenedor Docker
+	$(DOCKER_COMPOSE) exec $(SERVICE) python manage.py test
 
 # Utilidades
-collectstatic: ## Recolecta archivos estáticos
-	$(POETRY) run $(MANAGE) collectstatic --noinput
-
-lint: ## Ejecuta el linter (flake8, black, etc.)
-	@echo "Ejecutando linters..."
-	@$(POETRY) run flake8 . || echo "⚠️  flake8 no está instalado"
-	@$(POETRY) run black --check . || echo "⚠️  black no está instalado"
-
-format: ## Formatea el código con black
-	@$(POETRY) run black . || echo "⚠️  black no está instalado"
-
 clean: ## Limpia archivos temporales y cache
 	find . -type d -name "__pycache__" -exec rm -r {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
@@ -165,21 +127,3 @@ clean-db: ## Elimina la base de datos (¡CUIDADO!)
 		rm -f db.sqlite3; \
 		echo "✅ Base de datos eliminada"; \
 	fi
-
-# Comando completo para setup inicial después de clonar
-first-setup: check-poetry install env-file migrate setup-first-user ## Setup completo para nuevos desarrolladores
-	@echo ""
-	@echo "🎉 ¡Setup inicial completado!"
-	@echo ""
-	@echo "📋 Próximos pasos:"
-	@echo "   1. Edita el archivo .env y configura:"
-	@echo "      - OPENAI_API_KEY (requerido)"
-	@echo "      - SECRET_KEY (recomendado cambiar)"
-	@echo "   2. Ejecuta 'make run' para iniciar el servidor"
-	@echo "   3. Accede a http://localhost:8000"
-	@echo ""
-	@echo "👤 Credenciales del primer usuario:"
-	@echo "   Username: admin"
-	@echo "   Password: admin123"
-	@echo "   ⚠️  Cambia la contraseña después del primer login"
-

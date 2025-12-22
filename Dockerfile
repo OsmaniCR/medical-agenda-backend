@@ -17,7 +17,9 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false
 
 # Install dependencies
-RUN poetry install --no-dev
+# --no-root evita que Poetry intente instalar el proyecto actual como paquete
+# (los archivos del proyecto se copian después)
+RUN poetry install --no-root
 
 # Copy project files
 COPY . .
